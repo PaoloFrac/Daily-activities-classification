@@ -1,4 +1,4 @@
-source('~/Data/Projects/Club M/Healthy volunteers study/R/FunctionScript.R', echo=FALSE)
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily activities classification/FunctionScript.R', echo=FALSE)
 library("readxl")
 library("stringr")
 library("lubridate")

@@ -12,12 +12,9 @@ library("osmdata")
 library("readxl")
 library("zeallot")
 library("tidyverse")
-# install.packages("devtools")
-# library("devtools")
-# install_github("erzk/PostcodesioR")
-# library("devtools")
-# install_github("r-spatial/sf")
 library("PostcodesioR")
+library("RCurl")
+library("XML")
 source('~/Data/Projects/Club M/Healthy volunteers study/R/labelling_functions.R', echo=TRUE)
 
 sf_buildings <- buildings_info <- NULL
@@ -427,6 +424,57 @@ sf_places_classified_duplicates <- sf_places_classified %>%
 ### removing uncertain classifications
 sf_places_classified <- sf_places_classified %>% 
   anti_join(sf_places_classified_duplicates, by = c("patient", "placeID"))
+
+### try to use Google Places API to classify unclassified places
+# key Google Place API
+key= c("AIzaSyDWs7eStEfQRGG8tuNDheo2SJR8ooPjr14",
+       "AIzaSyCdyXaICjKXqefkUUzebnw7A6wDvcQac7",
+       "AIzaSyCl_RMVOmZfOVdfj8Umn9RRytSHdSIIV3k",
+       "AIzaSyAoZSLAoWUxPlOBGE3EeHUlxJ9arrPJt90")
+
+# select unclassified places 
+sf_places_unclassified <- sf_places_classified %>% 
+  filter(is.na(placeType)) %>% 
+    select(patient, placeID) %>% 
+      left_join(sf_places, by = c("patient", "placeID")) # merging with place coordinates
+
+# initialise variable
+sf_places_unclassified_google <- NULL
+
+for(i in 1:nrow(sf_places_unclassified)){
+  
+  tmp <- getGooglePlacesPOI(sf_places_unclassified$CenterLat[i], sf_places_unclassified$CenterLong[i], key)
+  
+  if(is.null(tmp)){ # if nothing was found
+    
+    sf_places_unclassified_google <- bind_rows(sf_places_unclassified_google,
+                                               data.frame(patient = sf_places_unclassified$patient[i],
+                                                          placeID = sf_places_unclassified$placeID[i],
+                                                          placeType = NA_character_)) # add only patient and placeID
+    
+  } else{
+    
+    if(tmp$distance <= distance_threshold){ # only if it respects the distance threshold
+      
+      sf_places_unclassified_google <- bind_rows(sf_places_unclassified_google,
+                                                 data.frame(patient = sf_places_unclassified$patient[i],
+                                                            placeID = sf_places_unclassified$placeID[i],
+                                                            placeType = tmp$placeType))
+      
+    } else{
+      
+      sf_places_unclassified_google <- bind_rows(sf_places_unclassified_google,
+                                                 data.frame(patient = sf_places_unclassified$patient[i],
+                                                            placeID = sf_places_unclassified$placeID[i],
+                                                 placeType = NA_character_))
+      
+    }
+    
+  }
+  
+}
+
+
 
 
 save.image(paste("labelling_results",timeThreshold,".RData"))
