@@ -56,30 +56,14 @@ The information we need is *id, name, short name*. We need also to include *cate
 
 #Extract relevant info and create full category list
 
-```{r}
-
-tmp_cat <- categories_full$response$categories
-
-categories_info <- NULL
-
-for(i in 1:nrow(tmp_cat)){
-  
-  categories_info <- bind_rows(categories_info,
-                               data.frame(
-                               parent_id = tmp_cat$id[i],
-                               tmp_cat$categories[[i]] %>% select(-icon)))
-  
-}
-
-glimpse(categories_info)
-
-```
-
-The above works but this has to be iterated several times because of the different categories layers. With a while loop and updating the data frame in dynamically (e.g. adding rows to process in the tail) we should be able to do it.
 
 ```{r}
 
 i <- 1
+
+categories_info <- categories_full$response$categories %>% 
+  select(-icon) %>% 
+    mutate(parent_id = id)
 
 categories_info$processed <- FALSE # initialise control variable
 
