@@ -5,7 +5,7 @@ library("lubridate")
 library("tidyverse")
 library("PostcodesioR")
 
-minutes_threshold <- 10
+minutes_threshold <- 8
 
 timeThreshold <- 60*minutes_threshold
 
