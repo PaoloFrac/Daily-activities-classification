@@ -38,6 +38,18 @@ venues$lat <- venues$location$lat
 venues$lng <- venues$location$lng
 venues$distance <- venues$location$distance
 
+if(sum(colnames(venues) == "venuePage")>0){
+    
+    venues <- venues %>% 
+    select(-location, -venuePage) 
+    
+}else{
+  
+  venues <- venues %>% 
+    select(-location) 
+  
+}
+
 venues <- venues %>% 
-  select(-location, -venuePage) %>% 
-    filter(distance == min(distance))
+  filter(distance == min(distance)) 
+  
