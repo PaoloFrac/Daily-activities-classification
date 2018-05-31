@@ -70,39 +70,4 @@ df.places = assignPlaceID(df,places,radius)
 
 places.visited = getPlaceList(df.places, places)
 saveRDS(places.visited,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places_visited",timeThreshold,".rds"))
-# Step 3: Type of Place and Activity recognition
-# ______________________________________________
-activities = place_activity_recognition(places.visited, key, "~/Data/Projects/Club M/Healthy volunteers study/Datasets/")
-
-
-# Step 4: extraction of NPV and OOH-hours
-activityList = getActivityList(activities)
-getNPV = getNPV(activityList)
-
-# Data summary: 
-# For each participant I calculated: 
-# 1) number of days
-# 2) number of total hours
-# 3) number of activities, according to SFD
-
-sfd.tmp = getListActivitiesSFD(sfd)
-# home tags to lower
-sfd.tmp$activityCategory = as.factor(tolower(as.character(sfd.tmp$activityCategory)))
-
-df$patient = as.character(df$patient)
-sfd.tmp$patient = as.character(sfd.tmp$patient)
-dataSummary = getDataSummary(df, sfd.tmp)
-write.xlsx(dataSummary, "C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Analysis/data_summary.xlsx")
-
-# Results
-dailyCategories = getDailyCategoriesActivities(activities)
-sfd.tmp = getListActivitiesSFD(sfd)
-sfd.tmp$activityCategory = as.factor(tolower(as.character(sfd.tmp$activityCategory)))
-performance = getPerformance(sfd.tmp, dailyCategories)
-
-# write result
-write.xlsx(performance, "C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Analysis/performance.xlsx")
-
-# write activities
-saveRDS(activities, "C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Analysis/activities.rds")
 
