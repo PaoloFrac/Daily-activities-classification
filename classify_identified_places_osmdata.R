@@ -15,7 +15,7 @@ library("tidyverse")
 library("PostcodesioR")
 library("RCurl")
 library("XML")
-source('~/Data/Projects/Club M/Healthy volunteers study/R/labelling_functions.R', echo=TRUE)
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
 
 sf_buildings <- buildings_info <- NULL
 
