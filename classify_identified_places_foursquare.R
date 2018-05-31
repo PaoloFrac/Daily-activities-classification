@@ -98,7 +98,7 @@ for(i in 1:nrow(places)){
 }
 
 
-
+save.image(file = "~/Data/Projects/Club M/Healthy volunteers study/Analysis/places_classfied_foursquare.rdata")
 
 
 
