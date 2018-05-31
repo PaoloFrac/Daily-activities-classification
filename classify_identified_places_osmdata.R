@@ -155,7 +155,7 @@ for(i in 1:nrow(sf_places)){ # for each place
             
           } else{ # if no POIs in building
             
-            # check if building has other tags to building=yes attached
+            # check if building has other tags other than building=yes attached
             sf_polygons_class <- sf_polygons %>% 
               filter(value != "yes")
             
@@ -177,23 +177,25 @@ for(i in 1:nrow(sf_places)){ # for each place
       
     } 
     
-    check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & sf_places_classified$patient == sf_places$patient[i]
+    # control if place already classified
+    check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & 
+                            sf_places_classified$patient == sf_places$patient[i]
     
     if(sum(check_if_classified) == 0){ # if not classified yet
-       if(sum(is_in_building)>0){
+       if(sum(is_in_building)>0){ # if it is in a building
          
-         if(!is.null(sf_multipolygons_geom)){
+         if(!is.null(sf_multipolygons_geom)){ # if there are areas
            
-           building_is_in_area <- st_intersects(sf_polygons_geom, sf_multipolygons_geom %>% st_cast("POLYGON"), sparse = FALSE)
+           building_is_in_area <- st_intersects(sf_polygons_geom, sf_multipolygons_geom %>% st_cast("POLYGON"), sparse = FALSE) # check if the building is in a specific area (e.g. hospital, university, ecc)
            
-           if(sum(building_is_in_area) > 0){
+           if(sum(building_is_in_area) > 0){ # if the building is in an area
              
              sf_multipolygons_geom <- sf_multipolygons_geom[building_is_in_area, ]
              
              sf_multipolygons <- sf_multipolygons %>% 
                filter(ID %in% sf_multipolygons_geom$ID)
              
-             if(nrow(sf_multipolygons_geom) > 1){
+             if(nrow(sf_multipolygons_geom) > 1){ # if the building is in multiple areas keep only closest
                
                dist_areas <- calculate_distance(dist = NULL, sf_places_geom[i, ], sf_multipolygons_geom %>% st_cast("POLYGON") %>% st_cast("LINESTRING"), type = "multy")
                
@@ -214,7 +216,7 @@ for(i in 1:nrow(sf_places)){ # for each place
                                                               ontology)
              
              
-           }else{
+           }else{ # if there are no areas
              
              sf_polygons_all <- sf_polygons_all %>% 
                filter(value != "yes")
@@ -227,7 +229,7 @@ for(i in 1:nrow(sf_places)){ # for each place
                # check whether in area mistakenly labelled as building
                building_is_in_area <- st_intersects(sf_polygons_geom, sf_polygons_geom_all, sparse = FALSE)
                
-               if(sum(building_is_in_area) > 0){
+               if(sum(building_is_in_area) > 0){ # check if building is in an area that was mistakenly labelled as building
                  
                  sf_polygons_geom_all <- sf_polygons_geom_all[building_is_in_area, ]
                  
@@ -259,7 +261,7 @@ for(i in 1:nrow(sf_places)){ # for each place
          
        }
       
-      } else{
+      } else{ # if point is not in any building
         
         c(sf_points, sf_points_geom) %<-% remove_building_yes(sf_points, sf_points_geom)
         
@@ -367,7 +369,7 @@ for(i in 1:nrow(sf_places)){ # for each place
   # check if classified or not
   check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & sf_places_classified$patient == sf_places$patient[i]
   
-  if(sum(check_if_classified) == 0){
+  if(sum(check_if_classified) == 0){ # if not classified add empty row
     
     sf_places_classified <- sf_places_classified %>% 
       bind_rows(
