@@ -6,6 +6,9 @@ library("readr")
 
 categories <- read_csv("~/Data/Projects/Club M/Healthy volunteers study/Datasets/foursquare_categories.csv")
 
+# load foursquare credential
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/foursquare_credentials.R', echo=TRUE)
+
 distance_threshold <- 50
 
 minutes_threshold <- 10
