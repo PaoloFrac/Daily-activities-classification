@@ -89,5 +89,13 @@ glimpse(categories_info)
 
 ```
 
+Let's delete the *categories* column and save the file to use it in the analysis.
+
+```{r}
+
+write.csv(categories_info %>% 
+            select(-categories), "~/Data/Projects/Club M/Healthy volunteers study/Datasets/foursquare_categories.csv", row.names = FALSE)
+
+```
 
 
