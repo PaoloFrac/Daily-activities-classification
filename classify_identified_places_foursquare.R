@@ -6,10 +6,6 @@ library("readr")
 
 categories <- read_csv("~/Data/Projects/Club M/Healthy volunteers study/Datasets/foursquare_categories.csv")
 
-client_id <- "TRDTAHS4ZSJV2ROTNEQXVY5HE1DWOWJUJXIBSMQ1BUAD3DO1"
-
-client_secret <- "ZCAEILOCQ4NGEOJIIJABRBAU3MPMWKLV3ABN5GACSSIBREY4"
-
 distance_threshold <- 50
 
 minutes_threshold <- 10

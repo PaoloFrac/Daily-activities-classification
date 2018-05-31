@@ -25,16 +25,16 @@ minutes_threshold <- 10
 
 timeThreshold <- 60*minutes_threshold
 
-sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places", timeThreshold,".rds"))
+sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places", timeThreshold,".rds")) # load found places
 
-sf_places_geom <-  sf_places %>%
+sf_places_geom <-  sf_places %>% # initialise as sf object
   st_as_sf(coords = c("CenterLong", "CenterLat")) %>%
-  st_set_crs(4326)
+  st_set_crs(4326) # set coordinate reference system
 
 sf_places_classified <- NULL
 
 ontology <- read_excel("~/Data/Projects/Club M/Healthy volunteers study/Datasets/Ontology.xlsx", sheet = 1) %>% 
-  bind_rows(data.frame(
+  bind_rows(data.frame( # add also tags identifying only building without any further attribute
     key = "building",
     value = "yes"
   ))
@@ -43,7 +43,7 @@ key_values <- unique(ontology$key)
 
 error_index <- NULL
 
-for(i in 1:nrow(sf_places)){
+for(i in 1:nrow(sf_places)){ # for each place
 
   #initialise result from OSM
   opq <- NULL
@@ -60,14 +60,7 @@ for(i in 1:nrow(sf_places)){
     opq <- parse(text = opq_string) %>% 
       eval()
   },
-  error = function(e) {
-    #cat(paste0("`osmdata_sf` returned an error: ", e))
-    
-    #error_occured <- TRUE
-    
-  #  next
-    
-  })
+  error = function(e) {})
   
   if(!is.null(opq)){
     
@@ -91,17 +84,6 @@ for(i in 1:nrow(sf_places)){
         # save data to use them later eventually
         sf_polygons_all <- sf_polygons
         sf_polygons_geom_all <- sf_polygons_geom
-        
-        # # keep only actual buildings
-        # building_IDs <- sf_polygons %>% 
-        #   filter(key == "building") %>% 
-        #     select(ID)
-        # 
-        # sf_polygons <- sf_polygons %>% 
-        #   filter(ID %in% building_IDs$ID)
-        # 
-        # sf_polygons_geom <- sf_polygons_geom %>% 
-        #   filter(ID %in% sf_polygons$ID)
         
         is_in_building <- st_intersects(sf_places_geom[i, ], sf_polygons_geom, sparse = FALSE) # check if place in building
         
