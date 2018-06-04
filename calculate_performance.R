@@ -1,4 +1,4 @@
-source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily activities classification/FunctionScript.R', echo=TRUE)
 library("readxl")
 library("stringr")
 library("lubridate")
@@ -161,3 +161,11 @@ write.csv(NPV_comp, paste("C:/Users/paolo/Documents/Data/Projects/Club M/Healthy
 # write activities
 saveRDS(places.visited_classified, paste("C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Analysis/activities_OSM",timeThreshold,".rds"))
 
+## calculate mean number of unique categories per patient
+sfd.tmp %>% 
+  group_by(patient) %>% 
+    distinct(activityCategory) %>% 
+      count() %>% 
+        ungroup() %>% 
+          summarise(mean = round(mean(n), 0),
+                    sd = round(sd(n), 0))
