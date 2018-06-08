@@ -261,7 +261,7 @@ for(i in 1:nrow(sf_places)){ # for each place
          
        }
       
-      } else{ # if point is not in any building
+      } else{ # if point is not in any building, remove not relevant tags (e.g. building = yes)
         
         c(sf_points, sf_points_geom) %<-% remove_building_yes(sf_points, sf_points_geom)
         
@@ -298,7 +298,7 @@ for(i in 1:nrow(sf_places)){ # for each place
                                                            get(as.character(dist$relevant_object_name[1])) %>% filter(ID == dist$ID[1]),
                                                            ontology)
           
-        }else{ # check if point in area
+        }else{ # alternatively check if point in area
           
           if(!is.null(sf_multipolygons_geom)){
             
@@ -367,7 +367,8 @@ for(i in 1:nrow(sf_places)){ # for each place
   }
   
   # check if classified or not
-  check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & sf_places_classified$patient == sf_places$patient[i]
+  check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & 
+                          sf_places_classified$patient == sf_places$patient[i]
   
   if(sum(check_if_classified) == 0){ # if not classified add empty row
     
@@ -384,12 +385,11 @@ for(i in 1:nrow(sf_places)){ # for each place
       )
   }
  
- 
 }
   
 saveRDS(sf_places_classified, paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/sf_places",timeThreshold,".rds"))
   
-###### check if different categories 
+###### check if different categories for the same place 
 (tmp <- sf_places_classified %>% 
   group_by(patient, placeID) %>% 
     count() %>% 

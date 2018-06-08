@@ -669,7 +669,7 @@ homeFinder <- function(possible_homes, places.visited){
   pl <- possible_homes %>% 
     left_join(activities %>% 
                 distinct(patient, placeID, longitude, latitude, placeType), by = c("patient", "placeID")) %>% 
-      filter(placeType %in% c("residential","dormitory"))
+      filter(placeType %in% c("residential","dormitory")) # only places with tag residential and dormitory
   
   for(pat in unique(pl$patient)){ # for each patient
     
@@ -1093,33 +1093,47 @@ getDailyCategoriesActivities = function(activities){
 }
 
 getPerformance = function(sfd, activityList){
-  meanRecall = 0; meanPrecision = 0
+  # initialise variables
+  meanRecall = 0; meanPrecision = 0 
+  
   activityList = unique(activityList[,c("patient","date","activityCategory")])
+  
   patients = unique(sfd$patient)
+  
   performance = data.frame(patient=patients, recall=0, precision=0, n_activities=0)
+  
   for(p in patients){ # for each patient
-    sfd.tmp = sfd[sfd$patient==p,] # get SF diary
-    activityList.tmp = activityList[activityList$patient==p,] # get activities list
-    confusionMatrix = getConfusionMatrix(sfd.tmp, activityList.tmp) # calculate confusion matrix
+    # get SF diary
+    sfd.tmp = sfd[sfd$patient==p,] 
+    # get activities list
+    activityList.tmp = activityList[activityList$patient==p,]
+    # calculate confusion matrix
+    confusionMatrix = getConfusionMatrix(sfd.tmp, 
+                                         activityList.tmp)
+    #calculate performance
     recall = (confusionMatrix[1,1]/(confusionMatrix[1,1]+confusionMatrix[2,1]))
     precision = (confusionMatrix[1,1]/(confusionMatrix[1,1]+confusionMatrix[1,2]))
     n_activities = confusionMatrix[1,1] + confusionMatrix[2,1]
-   # n_days = unique(sfd.tmp$date)
+   
+    # add performance to performance df
     performance[performance$patient==p, ]$recall = recall
     performance[performance$patient==p, ]$precision = precision
     performance[performance$patient==p, ]$n_activities = n_activities
-    #performance[performance$patient==p, ]$n_days = n_days
+    #update overall performance variables
     meanRecall = meanRecall + (recall*(n_activities)) 
     meanPrecision = meanPrecision + (precision*(n_activities))
   }
+  #calculate overall performance
   meanRecall = meanRecall/sum(performance$n_activities)
   meanPrecision = meanPrecision / sum(performance$n_activities)
   sdRecall = wheightedSD(meanRecall,length(patients),performance$n_activities, performance$recall)
   sdPrecision = wheightedSD(meanPrecision,length(patients),performance$n_activities, performance$precision)
+  #create overall performance row
   mean = c("mean (sd)", 
            paste0(round(meanRecall, 3)," (",round(sdRecall, 3),")"),
            paste0(round(meanPrecision, 3)," (",round(sdPrecision, 3),")"),
            paste0(round(mean(performance$n_activities), 0), " (", round(sd(performance$n_activities), 0), " )"))
+  #format data
   performance$patient = as.character(performance$patient)
   performance$recall = format(round(performance$recall, 3), nsmall = 3)
   performance$precision = format(round(performance$precision, 3), nsmall = 3)
@@ -1170,20 +1184,24 @@ getPerformance = function(sfd, activityList){
 
 getConfusionMatrix = function(sfd,activityList){
   
+  # initialise variables 
   matrix = matrix(0,nrow = 2, ncol = 2)
   TP = 0; FN = 0; FP = 0
   dates = unique(sfd$date)
+  
   for(j in 1:length(dates)){ # for each date
     sfd.tmp = sfd[sfd$date==dates[j],]
     activityList.tmp = activityList[activityList$date==dates[j],]
-    #categories = unique(sfd.tmp[,c("activityCategory")]) # get all unique categories for the day
     
+    # TP as activity category in both the algo category and the diary category
     TP.j <- nrow(activityList.tmp %>% 
                    filter(activityCategory %in% sfd.tmp$activityCategory))
+    # FN as the difference between the number of activites in the diary and the TP
     FN.j <- nrow(sfd.tmp) - TP.j
-    
+    # FP as the difference between the number of activities found by the algo and the TP
     FP.j <- nrow(activityList.tmp) - TP.j
     
+    #update overall patients results
     TP <- TP + TP.j
     
     FN <- FN + FN.j

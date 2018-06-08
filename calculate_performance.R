@@ -25,7 +25,7 @@ places.visited_classified  <- places.visited_classified %>%
 
 places.visited_classified <- places.visited_classified %>% 
   getHome() %>% 
-    mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))
+    mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))# participants were mostly medical students going to different hospitals for training
 
 
 #### Results
@@ -51,7 +51,7 @@ sfd <- sfd %>%
 
 # get unique daily categories found by the algorithm
 dailyCategories <- getDailyCategoriesActivities(places.visited_classified) %>% 
-  filter(!is.na(activityCategory)) # removing not labelled places
+  filter(!is.na(activityCategory)) # removing not labelled places that in a real case scenarios would have to be asked to the participant
 
 # get unique categories recorded in diary
 sfd.tmp <-  getListActivitiesSFD(sfd)

@@ -53,21 +53,27 @@ sfd <- as.data.frame(sfd)
   minutes_threshold <- 10
 
   timeThreshold <- 60*minutes_threshold
+  
   distanceThreshold = 50
+  
   radius = 50
-  geo.visited = timeBasedMethod(df,timeThreshold,distanceThreshold) 
+  
+  # Step 1: Find geolocation visited
+  geo.visited = timeBasedMethod(df,timeThreshold,distanceThreshold) # apply time-based method
   geo.visited = rbind(geo.visited,
-                      densityBasedMethod(df,timeThreshold,radius) )
+                      densityBasedMethod(df,timeThreshold,radius) ) # apply density-based method
 # }
 # Step 2: Places visited identification
 # ______________________________________
 # 'spaceClustering' is a function that cluster geolocations visited in places
-# 'assignPlaceID' is the function that classify GPS data points with place ID 
 places = spaceClustering(geo.visited, radius)   
 saveRDS(places,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places", timeThreshold,".rds"))
 
+# 'assignPlaceID' is the function that classify GPS data points with place ID
 df.places = assignPlaceID(df,places,radius)
 
+
 places.visited = getPlaceList(df.places, places)
+
 saveRDS(places.visited,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places_visited",timeThreshold,".rds"))
 
