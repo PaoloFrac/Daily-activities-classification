@@ -12,13 +12,10 @@ library("osmdata")
 library("readxl")
 library("zeallot")
 library("tidyverse")
-# install.packages("devtools")
-# library("devtools")
-# install_github("erzk/PostcodesioR")
-# library("devtools")
-# install_github("r-spatial/sf")
 library("PostcodesioR")
-source('~/Data/Projects/Club M/Healthy volunteers study/R/labelling_functions.R', echo=TRUE)
+library("RCurl")
+library("XML")
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
 
 sf_buildings <- buildings_info <- NULL
 
@@ -28,16 +25,16 @@ minutes_threshold <- 10
 
 timeThreshold <- 60*minutes_threshold
 
-sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places", timeThreshold,".rds"))
+sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places", timeThreshold,".rds")) # load found places
 
-sf_places_geom <-  sf_places %>%
+sf_places_geom <-  sf_places %>% # initialise as sf object
   st_as_sf(coords = c("CenterLong", "CenterLat")) %>%
-  st_set_crs(4326)
+  st_set_crs(4326) # set coordinate reference system
 
 sf_places_classified <- NULL
 
 ontology <- read_excel("~/Data/Projects/Club M/Healthy volunteers study/Datasets/Ontology.xlsx", sheet = 1) %>% 
-  bind_rows(data.frame(
+  bind_rows(data.frame( # add also tags identifying only building without any further attribute
     key = "building",
     value = "yes"
   ))
@@ -46,7 +43,7 @@ key_values <- unique(ontology$key)
 
 error_index <- NULL
 
-for(i in 1:nrow(sf_places)){
+for(i in 1:nrow(sf_places)){ # for each place
 
   #initialise result from OSM
   opq <- NULL
@@ -63,14 +60,7 @@ for(i in 1:nrow(sf_places)){
     opq <- parse(text = opq_string) %>% 
       eval()
   },
-  error = function(e) {
-    #cat(paste0("`osmdata_sf` returned an error: ", e))
-    
-    #error_occured <- TRUE
-    
-  #  next
-    
-  })
+  error = function(e) {})
   
   if(!is.null(opq)){
     
@@ -94,17 +84,6 @@ for(i in 1:nrow(sf_places)){
         # save data to use them later eventually
         sf_polygons_all <- sf_polygons
         sf_polygons_geom_all <- sf_polygons_geom
-        
-        # # keep only actual buildings
-        # building_IDs <- sf_polygons %>% 
-        #   filter(key == "building") %>% 
-        #     select(ID)
-        # 
-        # sf_polygons <- sf_polygons %>% 
-        #   filter(ID %in% building_IDs$ID)
-        # 
-        # sf_polygons_geom <- sf_polygons_geom %>% 
-        #   filter(ID %in% sf_polygons$ID)
         
         is_in_building <- st_intersects(sf_places_geom[i, ], sf_polygons_geom, sparse = FALSE) # check if place in building
         
@@ -176,7 +155,7 @@ for(i in 1:nrow(sf_places)){
             
           } else{ # if no POIs in building
             
-            # check if building has other tags to building=yes attached
+            # check if building has other tags other than building=yes attached
             sf_polygons_class <- sf_polygons %>% 
               filter(value != "yes")
             
@@ -198,23 +177,25 @@ for(i in 1:nrow(sf_places)){
       
     } 
     
-    check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & sf_places_classified$patient == sf_places$patient[i]
+    # control if place already classified
+    check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & 
+                            sf_places_classified$patient == sf_places$patient[i]
     
     if(sum(check_if_classified) == 0){ # if not classified yet
-       if(sum(is_in_building)>0){
+       if(sum(is_in_building)>0){ # if it is in a building
          
-         if(!is.null(sf_multipolygons_geom)){
+         if(!is.null(sf_multipolygons_geom)){ # if there are areas
            
-           building_is_in_area <- st_intersects(sf_polygons_geom, sf_multipolygons_geom %>% st_cast("POLYGON"), sparse = FALSE)
+           building_is_in_area <- st_intersects(sf_polygons_geom, sf_multipolygons_geom %>% st_cast("POLYGON"), sparse = FALSE) # check if the building is in a specific area (e.g. hospital, university, ecc)
            
-           if(sum(building_is_in_area) > 0){
+           if(sum(building_is_in_area) > 0){ # if the building is in an area
              
              sf_multipolygons_geom <- sf_multipolygons_geom[building_is_in_area, ]
              
              sf_multipolygons <- sf_multipolygons %>% 
                filter(ID %in% sf_multipolygons_geom$ID)
              
-             if(nrow(sf_multipolygons_geom) > 1){
+             if(nrow(sf_multipolygons_geom) > 1){ # if the building is in multiple areas keep only closest
                
                dist_areas <- calculate_distance(dist = NULL, sf_places_geom[i, ], sf_multipolygons_geom %>% st_cast("POLYGON") %>% st_cast("LINESTRING"), type = "multy")
                
@@ -235,7 +216,7 @@ for(i in 1:nrow(sf_places)){
                                                               ontology)
              
              
-           }else{
+           }else{ # if there are no areas
              
              sf_polygons_all <- sf_polygons_all %>% 
                filter(value != "yes")
@@ -248,7 +229,7 @@ for(i in 1:nrow(sf_places)){
                # check whether in area mistakenly labelled as building
                building_is_in_area <- st_intersects(sf_polygons_geom, sf_polygons_geom_all, sparse = FALSE)
                
-               if(sum(building_is_in_area) > 0){
+               if(sum(building_is_in_area) > 0){ # check if building is in an area that was mistakenly labelled as building
                  
                  sf_polygons_geom_all <- sf_polygons_geom_all[building_is_in_area, ]
                  
@@ -280,7 +261,7 @@ for(i in 1:nrow(sf_places)){
          
        }
       
-      } else{
+      } else{ # if point is not in any building, remove not relevant tags (e.g. building = yes)
         
         c(sf_points, sf_points_geom) %<-% remove_building_yes(sf_points, sf_points_geom)
         
@@ -317,7 +298,7 @@ for(i in 1:nrow(sf_places)){
                                                            get(as.character(dist$relevant_object_name[1])) %>% filter(ID == dist$ID[1]),
                                                            ontology)
           
-        }else{ # check if point in area
+        }else{ # alternatively check if point in area
           
           if(!is.null(sf_multipolygons_geom)){
             
@@ -386,9 +367,10 @@ for(i in 1:nrow(sf_places)){
   }
   
   # check if classified or not
-  check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & sf_places_classified$patient == sf_places$patient[i]
+  check_if_classified <- sf_places_classified$placeID == sf_places$placeID[i] & 
+                          sf_places_classified$patient == sf_places$patient[i]
   
-  if(sum(check_if_classified) == 0){
+  if(sum(check_if_classified) == 0){ # if not classified add empty row
     
     sf_places_classified <- sf_places_classified %>% 
       bind_rows(
@@ -403,12 +385,11 @@ for(i in 1:nrow(sf_places)){
       )
   }
  
- 
 }
   
 saveRDS(sf_places_classified, paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/sf_places",timeThreshold,".rds"))
   
-###### check if different categories 
+###### check if different categories for the same place 
 (tmp <- sf_places_classified %>% 
   group_by(patient, placeID) %>% 
     count() %>% 

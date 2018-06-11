@@ -1,0 +1,101 @@
+---
+title: "Retrieve Foursquare categories"
+output: html_notebook
+---
+
+We need to retrieve the full list of foursquare categories to be used to label the different places found by our algorithm. Foursquare has an API that allows to do that. However, we will need a bit of coding to unpack the relevant info we need, which will come in json format.
+
+#Load relevant packages and initialise credentials
+
+```{r}
+library("jsonlite")
+library("dplyr")
+library("stringr")
+library("RCurl")
+
+client_id <- "TRDTAHS4ZSJV2ROTNEQXVY5HE1DWOWJUJXIBSMQ1BUAD3DO1"
+
+client_secret <- "ZCAEILOCQ4NGEOJIIJABRBAU3MPMWKLV3ABN5GACSSIBREY4"
+
+```
+
+
+#Interrogate Foursquare API
+
+```{r}
+categories_full <- getURL(str_c("https://api.foursquare.com/v2/venues/categories?",
+                                "client_id=", client_id, "&",
+                                "client_secret=", client_secret, "&",
+                                "v=20180530", sep = "")) %>% 
+                    fromJSON()
+                     
+
+
+
+```
+#Explore response
+
+```{r}
+glimpse(categories_full$response$categories)
+
+categories_full$response$categories
+```
+
+
+There are 10 "parent" categories in total, with each one that has more specific labels. We need to try to extract those labels. 
+
+Let's have a look at the subcategories for the first main category. 
+
+
+```{r}
+glimpse(categories_full$response$categories$categories[1][[1]])
+
+```
+
+The information we need is *id, name, short name*. We need also to include *categories* because some categories have further subcategories too.
+
+#Extract relevant info and create full category list
+
+
+```{r}
+
+i <- 1
+
+categories_info <- categories_full$response$categories %>% 
+  select(-icon) %>% 
+    mutate(parent_id = id)
+
+categories_info$processed <- FALSE # initialise control variable
+
+while(sum(!categories_info$processed) > 0){ # until there are rows to process
+  
+  if(!is.null(unlist(categories_info$categories[i]))){ # if there are children nodes
+    
+    categories_info <- bind_rows(categories_info,
+                                 data.frame(
+                                 parent_id = categories_info$id[i],
+                                 categories_info$categories[[i]] %>% select(-icon),
+                                 processed = FALSE))
+      
+  }
+  
+  categories_info$processed[i] <- TRUE
+  
+  i <- i + 1
+  
+}
+
+glimpse(categories_info)
+
+```
+
+Let's delete the *categories* column and save the file to use it in the analysis.
+
+```{r}
+
+write.csv(categories_info %>% 
+            select(-categories), "~/Data/Projects/Club M/Healthy volunteers study/Datasets/foursquare_categories.csv", row.names = FALSE)
+
+```
+
+
