@@ -5,9 +5,9 @@ gps_data_column_names <- c("Latitude", "Longitude", "Altitude", "Bearing", "Accu
 activity_data_column_name <- c("patient", "date", "time.start", "time.end", "place", "activityType", "activityCategory")
 
 # # Directories
-directory <- "~/Data/Projects/Club M/Healthy volunteers study/Datasets"
+directory <- "Users/cengyan/Download/Files"
 # sourcing file with functions
-source('~/Data/Projects/Club M/Healthy volunteers study/R/FunctionScript.R')
+source('Users/cengyan/Download/Daily-activities-classification-Yan-s-thesis/FunctionScript.R')
 # libraries
 library("osmar")
 library("ggmap")
