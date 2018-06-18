@@ -31,7 +31,7 @@ key= c("AIzaSyDWs7eStEfQRGG8tuNDheo2SJR8ooPjr14",
 df <- readRDS(paste(directory, "analysible_gps_data.rds", sep = "/")) %>% 
   select(Latitude, Longitude, Altitude, Bearing, Accuracy, Speed, TimeStamp, sessionid, patient, X) %>% 
     mutate(patient = factor(patient),
-           sessionid = factor(sessionid))
+           sessionid = factor(sessionid)) #error
 
 df <- as.data.frame(df)
 
