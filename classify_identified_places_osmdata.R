@@ -75,7 +75,7 @@ for(i in 1:nrow(sf_places)){ # for each place
     
     
     # plot results
-    source('~/Data/Projects/Club M/Healthy volunteers study/R/tmp.R', echo=TRUE)
+    source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/tmp.R', echo=TRUE)
     
     if(!is.null(sf_polygons_geom)){ # if there are buildings around
       
