@@ -410,4 +410,12 @@ sf_places_classified <- sf_places_classified %>%
   anti_join(sf_places_classified_duplicates, by = c("patient", "placeID"))
 
 
+## chaning names and removing duplicates
+sf_places_classified <- sf_places_classified %>% 
+  rename(placeType = value,
+         activityType = activity,
+         activityCategory = category) %>% 
+  distinct(patient, placeID, activityCategory, .keep_all = TRUE)
+
+
 save.image(paste("labelling_results",timeThreshold,".RData"))
