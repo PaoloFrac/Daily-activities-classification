@@ -231,7 +231,7 @@ getMediumSpeed <- function(df){
   dfTemp = data.frame(df, 
                       xPrev = c(NA, df$X[-nrow(df)]),
                       patientPrev = c(NA, as.character(df$patient[-dim(df)[1]])), 
-                      sessionIdPrev = c(NA, df$sessionid[-dim(df)[1]]),    
+                      sessionIdPrev = c(NA, as.character(df$sessionid[-dim(df)[1]])),    
                       timeStampPrev = c(NA, as.character(df$TimeStamp[-dim(df)[1]])),
                       latPrev = c(NA, df$Latitude[-dim(df)[1]]),
                       longPrev = c(NA, df$Longitude[-dim(df)[1]]))

@@ -7,7 +7,7 @@ activity_data_column_name <- c("patient", "date", "time.start", "time.end", "pla
 # # Directories
 directory <- "~/Data/Projects/Club M/Healthy volunteers study/Datasets"
 # sourcing file with functions
-source('~/Data/Projects/Club M/Healthy volunteers study/R/FunctionScript.R')
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily activities classification/FunctionScript.R', echo=FALSE)
 # libraries
 library("osmar")
 library("ggmap")
