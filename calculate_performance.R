@@ -5,17 +5,31 @@ library("lubridate")
 library("tidyverse")
 library("PostcodesioR")
 
+#analysis_type <- "time_based"
+ #analysis_type <- "density_based"
+ analysis_type <- "combined"
+
 minutes_threshold <- 8
 
 timeThreshold <- 60*minutes_threshold
 
-load(paste("~/Data/Projects/Club M/Healthy volunteers study/labelling_results", timeThreshold,".RData"))
+load(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
+           analysis_type,
+           "/labelling_results",
+           timeThreshold,
+           ".RData",
+           sep = ""))
 
 
 ############## assign classified places to places visited
-places.visited_classified  <- readRDS(paste("C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Datasets/places_visited", timeThreshold,".rds")) %>% 
+places.visited_classified  <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
+                                            analysis_type,
+                                            "/places_visited",
+                                            timeThreshold,
+                                            ".rds",
+                                            sep = "")) %>% 
     mutate(duration = as.duration(intervalTime)) %>% 
-        left_join(sf_places_classified, by = c("patient","placeID")) # add place info to daily activities
+        merge(sf_places_classified, by = c("patient","placeID")) # add place info to daily activities
 
 
 places.visited_classified <- places.visited_classified[as.numeric(places.visited_classified$duration) >= 60, ] # keep only activities that last more than one minute
@@ -43,6 +57,8 @@ sfd <- readRDS("~/Data/Projects/Club M/Healthy volunteers study/Datasets/analysi
          activityCategory = factor(activityCategory))
 
 sfd <- as.data.frame(sfd) 
+
+#sfd <- sfd %>% filter(patient %in% c(1:5))
 
 # introduce date column
 places.visited_classified$date <- as.Date(places.visited_classified$intervalTime@start)
@@ -100,7 +116,10 @@ performance_combined <- performance %>%
   left_join(performance_non_class, by = "patient")
 
 
-write.csv(performance_combined, paste("C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Analysis/performance_OSM",timeThreshold,".csv"))
+write.csv(performance_combined, paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
+                                      analysis_type,
+                                      "/performance_OSM",
+                                      timeThreshold,".csv", sep = ""))
 
 #calculate performance on number of daily categories
 dailyCategories <- getDailyCategoriesActivities(places.visited_classified)
@@ -156,10 +175,14 @@ NPV_comp <- NPV_comp %>%
     bind_rows(overall_performance)
 
 
-write.csv(NPV_comp, paste("C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Analysis/patients_places_visited", timeThreshold,".csv"))
+write.csv(NPV_comp, paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
+                          analysis_type,
+                          "/patients_places_visited", timeThreshold,".csv", sep = ""))
 
 # write activities
-saveRDS(places.visited_classified, paste("C:/Users/paolo/Documents/Data/Projects/Club M/Healthy volunteers study/Analysis/activities_OSM",timeThreshold,".rds"))
+saveRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
+              analysis_type,
+              "/activities_OSM",timeThreshold,".rds", sep = ""))
 
 ## calculate mean number of unique categories per patient
 sfd.tmp %>% 

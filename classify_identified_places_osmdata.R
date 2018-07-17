@@ -19,13 +19,22 @@ source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-class
 
 sf_buildings <- buildings_info <- NULL
 
+#analysis_type <- "time_based"
+#analysis_type <- "density_based"
+analysis_type <- "combined"
+
 distance_threshold <- 50
 
 minutes_threshold <- 10
 
 timeThreshold <- 60*minutes_threshold
 
-sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places", timeThreshold,".rds")) # load found places
+sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
+                           analysis_type,
+                           "/places", 
+                           timeThreshold,
+                           ".rds",
+                           sep = "")) # load found places
 
 sf_places_geom <-  sf_places %>% # initialise as sf object
   st_as_sf(coords = c("CenterLong", "CenterLat")) %>%
@@ -75,7 +84,7 @@ for(i in 1:nrow(sf_places)){ # for each place
     
     
     # plot results
-    source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/tmp.R', echo=TRUE)
+    # source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/tmp.R', echo=TRUE)
     
     if(!is.null(sf_polygons_geom)){ # if there are buildings around
       
@@ -387,7 +396,12 @@ for(i in 1:nrow(sf_places)){ # for each place
  
 }
   
-saveRDS(sf_places_classified, paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/sf_places",timeThreshold,".rds"))
+saveRDS(sf_places_classified, paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
+                                    analysis_type,
+                                    "/sf_places",
+                                    timeThreshold,
+                                    ".rds",
+                                    sep = ""))
   
 ###### check if different categories for the same place 
 (tmp <- sf_places_classified %>% 
@@ -418,4 +432,10 @@ sf_places_classified <- sf_places_classified %>%
   distinct(patient, placeID, activityCategory, .keep_all = TRUE)
 
 
-save.image(paste("labelling_results",timeThreshold,".RData"))
+save.image(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
+                 analysis_type,
+                 "/labelling_results",
+                 timeThreshold,
+                 ".RData", 
+                 sep = ""))
+
