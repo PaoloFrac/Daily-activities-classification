@@ -231,7 +231,7 @@ getMediumSpeed <- function(df){
   dfTemp = data.frame(df, 
                       xPrev = c(NA, df$X[-nrow(df)]),
                       patientPrev = c(NA, as.character(df$patient[-dim(df)[1]])), 
-                      sessionIdPrev = c(NA, df$sessionid[-dim(df)[1]]),    
+                      sessionIdPrev = c(NA, as.character(df$sessionid[-dim(df)[1]])),    
                       timeStampPrev = c(NA, as.character(df$TimeStamp[-dim(df)[1]])),
                       latPrev = c(NA, df$Latitude[-dim(df)[1]]),
                       longPrev = c(NA, df$Longitude[-dim(df)[1]]))
@@ -669,7 +669,7 @@ homeFinder <- function(possible_homes, places.visited){
   pl <- possible_homes %>% 
     left_join(activities %>% 
                 distinct(patient, placeID, longitude, latitude, placeType), by = c("patient", "placeID")) %>% 
-      filter(placeType %in% c("residential","dormitory"))
+      filter(placeType %in% c("residential","dormitory")) # only places with tag residential and dormitory
   
   for(pat in unique(pl$patient)){ # for each patient
     
@@ -1093,33 +1093,47 @@ getDailyCategoriesActivities = function(activities){
 }
 
 getPerformance = function(sfd, activityList){
-  meanRecall = 0; meanPrecision = 0
+  # initialise variables
+  meanRecall = 0; meanPrecision = 0 
+  
   activityList = unique(activityList[,c("patient","date","activityCategory")])
+  
   patients = unique(sfd$patient)
+  
   performance = data.frame(patient=patients, recall=0, precision=0, n_activities=0)
+  
   for(p in patients){ # for each patient
-    sfd.tmp = sfd[sfd$patient==p,] # get SF diary
-    activityList.tmp = activityList[activityList$patient==p,] # get activities list
-    confusionMatrix = getConfusionMatrix(sfd.tmp, activityList.tmp) # calculate confusion matrix
+    # get SF diary
+    sfd.tmp = sfd[sfd$patient==p,] 
+    # get activities list
+    activityList.tmp = activityList[activityList$patient==p,]
+    # calculate confusion matrix
+    confusionMatrix = getConfusionMatrix(sfd.tmp, 
+                                         activityList.tmp)
+    #calculate performance
     recall = (confusionMatrix[1,1]/(confusionMatrix[1,1]+confusionMatrix[2,1]))
     precision = (confusionMatrix[1,1]/(confusionMatrix[1,1]+confusionMatrix[1,2]))
     n_activities = confusionMatrix[1,1] + confusionMatrix[2,1]
-   # n_days = unique(sfd.tmp$date)
+   
+    # add performance to performance df
     performance[performance$patient==p, ]$recall = recall
     performance[performance$patient==p, ]$precision = precision
     performance[performance$patient==p, ]$n_activities = n_activities
-    #performance[performance$patient==p, ]$n_days = n_days
+    #update overall performance variables
     meanRecall = meanRecall + (recall*(n_activities)) 
     meanPrecision = meanPrecision + (precision*(n_activities))
   }
+  #calculate overall performance
   meanRecall = meanRecall/sum(performance$n_activities)
   meanPrecision = meanPrecision / sum(performance$n_activities)
   sdRecall = wheightedSD(meanRecall,length(patients),performance$n_activities, performance$recall)
   sdPrecision = wheightedSD(meanPrecision,length(patients),performance$n_activities, performance$precision)
+  #create overall performance row
   mean = c("mean (sd)", 
            paste0(round(meanRecall, 3)," (",round(sdRecall, 3),")"),
            paste0(round(meanPrecision, 3)," (",round(sdPrecision, 3),")"),
            paste0(round(mean(performance$n_activities), 0), " (", round(sd(performance$n_activities), 0), " )"))
+  #format data
   performance$patient = as.character(performance$patient)
   performance$recall = format(round(performance$recall, 3), nsmall = 3)
   performance$precision = format(round(performance$precision, 3), nsmall = 3)
@@ -1170,20 +1184,24 @@ getPerformance = function(sfd, activityList){
 
 getConfusionMatrix = function(sfd,activityList){
   
+  # initialise variables 
   matrix = matrix(0,nrow = 2, ncol = 2)
   TP = 0; FN = 0; FP = 0
   dates = unique(sfd$date)
+  
   for(j in 1:length(dates)){ # for each date
     sfd.tmp = sfd[sfd$date==dates[j],]
     activityList.tmp = activityList[activityList$date==dates[j],]
-    #categories = unique(sfd.tmp[,c("activityCategory")]) # get all unique categories for the day
     
+    # TP as activity category in both the algo category and the diary category
     TP.j <- nrow(activityList.tmp %>% 
                    filter(activityCategory %in% sfd.tmp$activityCategory))
+    # FN as the difference between the number of activites in the diary and the TP
     FN.j <- nrow(sfd.tmp) - TP.j
-    
+    # FP as the difference between the number of activities found by the algo and the TP
     FP.j <- nrow(activityList.tmp) - TP.j
     
+    #update overall patients results
     TP <- TP + TP.j
     
     FN <- FN + FN.j
@@ -1401,4 +1419,280 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 }
 
+
+remove_multipolygons_from_polygons <- function(sf_polygons, sf_polygons_geom){
+  
+  polygons_to_remove <- NULL
+  # for each polygon check whether it contains other polygons -> it is a mislabelled multypoligon
+  for(i in 1:nrow(sf_polygons_geom)){
+    
+    st_intersects(sf_polygons_geom[i, ], sf_polygons_geom, sparse = FALSE)
+    
+  }
+  
+} 
+
+
+
+remove_building_yes <- function(shape, shape_geom){ # remove buildings with no value (e.g. only "yes")
+  
+  if(!is.null(shape)){
+    
+    shape <- shape %>%
+      filter(value != "yes")
+    
+    shape_geom <- shape_geom %>% 
+      filter(ID %in% shape$ID)
+    
+  }
+  
+  return(list(tags = shape, geom = shape_geom))
+}
+
+
+
+find_overlapping_duration <- function(start1, end1, start2, end2, units = "mins"){
+  
+  if(!is.na(start1) & !is.na(end1) & !is.na(start2) & !is.na(end2)){
+    
+    start <- end <- NA
+    
+    if(start1 > start2){
+      
+      start <- start1
+      
+    } else{
+      
+      start <- start2
+      
+    }
+    
+    if(end1 > end2){
+      
+      end <- end2
+      
+    } else{
+      
+      end <- end1
+      
+    }
+    
+    if(!is.na(start) & !is.na(start)){
+      
+      duration <- as.numeric(difftime(end, start, units = units))
+      
+    }else{
+      
+      duration <- 0
+      
+    }
+    
+  } else{
+    
+    duration <- 0
+    
+  }
+  
+  return(duration)
+  
+}
+
+
+create_overlapping_dataset <- function(df_alg, df_diary){
+  
+  df_diary <- df_diary %>% 
+    mutate(intervalTime = interval(time.start, time.end, tzone="GMT"))
+  
+  df_alg <- df_alg %>% 
+    mutate(intervalTime2 = interval(int_start(intervalTime),int_end(intervalTime), tzone = "GMT"))
+  
+  df_over <- NULL
+  
+  for(i in 1:nrow(df_alg)){ # for each identified activity
+    
+    tmp <- df_alg[i, ] # get ith activity
+    
+    tmp2 <- df_diary %>% 
+      filter(patient == tmp$patient) 
+    # %>% 
+    #     mutate(intervalTime = as.interval(as.character(intervalTime)))
+    
+    tmp3 <- intersect(tmp2$intervalTime, tmp$intervalTime)
+    
+  }
+  
+}
+
+
+create_osmdata_query_sf <- function(){
+  
+  opq_string <- "c("
+  
+  # for each relevant key
+  for(j in 1:length(key_values)){ # it builts the query that will be used by the sf package
+    
+    opq_string <- paste(opq_string,
+                        "opq(bbox) %>% add_osm_feature(key_values[",
+                        j,
+                        "]) %>% osmdata_sf()",
+                        ifelse(j != length(key_values), ", ", ""),
+                        sep = "")
+  }
+  
+  opq_string <- paste(opq_string, ")", sep = "")
+  
+  return(opq_string)
+  
+}
+
+create_osmdata_query_sp <- function(){
+  
+  opq_string <- "c("
+  
+  # for each relevant key
+  for(j in 1:length(key_values)){
+    
+    opq_string <- paste(opq_string,
+                        "opq(bbox) %>% add_osm_feature(key_values[",
+                        j,
+                        "]) %>% osmdata_sp()",
+                        ifelse(j != length(key_values), ", ", ""),
+                        sep = "")
+  }
+  
+  opq_string <- paste(opq_string, ")", sep = "")
+  
+  return(opq_string)
+  
+}
+
+extract_info_sf <- function(df, 
+                            ontology){
+  
+  sf_data_info <- sf_data_geom <- NULL
+  
+  # if there are shapes
+  if(!is.null(df)){ 
+    # convert to sf
+    sf_data <- df %>% 
+      mutate(ID =  1:nrow(df)) %>% 
+      st_as_sf() %>% 
+      st_set_crs(4326) 
+    
+    
+    # extract relevant info
+    sf_data_info <- sf_data %>% 
+      gather(key = "key", value = "value", -ID, -osm_id, -geometry) %>%
+      mutate(value = as.character(value)) %>% # convert to character to match ontology
+      semi_join(ontology, by = c("key", "value")) %>% # only records matching ontology
+      as_data_frame() %>% 
+      select(-geometry)
+    
+    sf_data_geom <- sf_data %>% 
+      filter(ID %in% sf_data_info$ID) # only shapes with relevant info
+    
+  }
+  
+  return(list(geom = sf_data_geom, info = sf_data_info))
+  
+}
+
+calculate_distance <- function(dist, 
+                               point, 
+                               shape, 
+                               type){
+  
+  for(i in 1:nrow(shape)){
+    
+    dist <- dist %>%
+      bind_rows(
+        data.frame(
+          ID = shape$ID[i],
+          relevant_object_name = type,
+          dist_m = min(as.numeric(st_distance(point,shape[i, ])))
+        )
+      )
+    
+  }
+  
+  dist
+  
+}
+
+
+calculate_distance_to_each_result_found <- function(sf_places_geom,
+                                                    sf_points_geom,
+                                                    sf_lines_geom,
+                                                    sf_polygons_geom){
+  
+  # calculate distances to each result found
+  dist <- NULL
+  
+  #POIs
+  if(!is.null(sf_points_geom)){
+    
+    if(nrow(sf_points_geom) > 0){
+      
+      dist <- calculate_distance(dist, sf_places_geom, sf_points_geom, "sf_points")
+      
+    }
+    
+  }
+  
+  #highways
+  if(!is.null(sf_lines_geom)){
+    
+    if(nrow(sf_lines_geom) > 0){
+      
+      dist <- calculate_distance(dist, sf_places_geom, sf_lines_geom, "sf_lines")
+      
+    }
+    
+  }
+  
+  #buildings
+  if(!is.null(sf_polygons_geom)){
+    
+    if(nrow(sf_polygons_geom) > 0){
+      
+      dist <- calculate_distance(dist, sf_places_geom, sf_polygons_geom %>% st_cast("LINESTRING"), "sf_polygons")
+      
+    }
+    
+  }
+  
+  # #areas
+  # if(!is.null(sf_multipolygons_geom)){
+  # 
+  #   if(nrow(sf_multipolygons_geom) > 0){
+  # 
+  #     dist <- calculate_distance(dist, sf_places_geom[i, ], sf_multipolygons_geom %>% st_cast("POLYGON") %>% st_cast("LINESTRING"), "sf_multipolygons")
+  # 
+  #   }
+  # 
+  # }
+  
+  dist
+  
+}
+
+
+add_place_classification <- function(sf_places_classified, 
+                                     patient, 
+                                     placeID, 
+                                     shape_info, 
+                                     ontology){
+  
+  sf_places_classified <- sf_places_classified %>% 
+    bind_rows(
+      data.frame(
+        patient = patient,
+        placeID = placeID,
+        ontology %>% 
+          semi_join(shape_info, by = c("key", "value"))
+      )
+    )
+  
+  sf_places_classified
+}
 

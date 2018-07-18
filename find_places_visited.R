@@ -6,18 +6,19 @@ activity_data_column_name <- c("patient", "date", "time.start", "time.end", "pla
 
 # # Directories
 directory <- "~/Data/Projects/Club M/Healthy volunteers study/Datasets"
+
 # sourcing file with functions
-source('~/Data/Projects/Club M/Healthy volunteers study/R/FunctionScript.R')
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=FALSE)
 # libraries
-library(osmar)
-library(ggmap)
-library(ggplot2)
-library(xlsx)
-library(chron)
-library(lubridate)
-library(plotKML)
-library(RCurl)
-library(XML)
+library("osmar")
+library("ggmap")
+library("ggplot2")
+library("xlsx")
+library("chron")
+library("lubridate")
+library("plotKML")
+library("RCurl")
+library("XML")
 library("tidyverse")
 library("PostcodesioR")
 
@@ -50,24 +51,59 @@ sfd <- readRDS(paste(directory, "analysible_activity_diary.rds", sep = "/")) %>%
 
 sfd <- as.data.frame(sfd)
 
-  minutes_threshold <- 10
+  minutes_threshold <- 9
+  
+  #analysis_type <- "time_based"
+   #analysis_type <- "density_based"
+ analysis_type <- "combined"
 
   timeThreshold <- 60*minutes_threshold
+  
   distanceThreshold = 50
+  
   radius = 50
-  geo.visited = timeBasedMethod(df,timeThreshold,distanceThreshold) 
-  geo.visited = rbind(geo.visited,
-                      densityBasedMethod(df,timeThreshold,radius) )
-# }
+  
+  
+  geo.visited <- NULL
+  
+  if(analysis_type %in% c("time_based", "combined")){
+    
+    # Step 1: Find geolocation visited
+    geo.visited = timeBasedMethod(df,timeThreshold,distanceThreshold) # apply time-based method
+    
+  }
+  
+  if(analysis_type %in% c("density_based", "combined")){
+    
+    geo.visited = rbind(geo.visited,
+                        densityBasedMethod(df,timeThreshold,radius) ) # apply density-based method
+    
+  }
+ 
+ # geo.visited = densityBasedMethod(df,timeThreshold,radius)
+  # }
 # Step 2: Places visited identification
 # ______________________________________
 # 'spaceClustering' is a function that cluster geolocations visited in places
-# 'assignPlaceID' is the function that classify GPS data points with place ID 
 places = spaceClustering(geo.visited, radius)   
-saveRDS(places,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places", timeThreshold,".rds"))
+saveRDS(places,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
+                       analysis_type,
+                       "/places", 
+                       timeThreshold,
+                       ".rds", 
+                       sep = ""))
 
+# 'assignPlaceID' is the function that classify GPS data points with place ID
 df.places = assignPlaceID(df,places,radius)
 
+
 places.visited = getPlaceList(df.places, places)
-saveRDS(places.visited,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/places_visited",timeThreshold,".rds"))
+
+saveRDS(places.visited,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
+                               analysis_type,
+                               "/places_visited",
+                               timeThreshold,
+                               ".rds",
+                               sep = ""))
+
 
