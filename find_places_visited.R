@@ -51,7 +51,7 @@ sfd <- readRDS(paste(directory, "analysible_activity_diary.rds", sep = "/")) %>%
 
 sfd <- as.data.frame(sfd)
 
-  minutes_threshold <- 9
+  minutes_threshold <- 10
   
   #analysis_type <- "time_based"
    #analysis_type <- "density_based"

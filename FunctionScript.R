@@ -221,6 +221,7 @@ timeBasedMethod <- function(df, timeThreshold, distanceThreshold){
     }
     geo.visited = df[df$geoVisited==TRUE,]
     geo.visited = geo.visited[,c("patient","sessionid","Latitude","Longitude")]
+    geo.visited$N_points = 1
   } else{
     geo.visited = NULL
   }
@@ -290,7 +291,8 @@ densityBasedMethod <- function(df,timeThreshold,radius, cluster = TRUE){
           geoVisited = data.frame(patient = ps$patient[row],
                                   sessionid = ps$sessionid[row],
                                   Latitude = tenMinPoints$latC[1],
-                                  Longitude = tenMinPoints$longC[1])
+                                  Longitude = tenMinPoints$longC[1],
+                                  N_points = nrow(tenMinPoints))
           
         }else{
           
@@ -327,10 +329,27 @@ getDeltaTimeMinutesPoints <- function(df, start, timeThreshold){
   return(tmp)
 }
 
-getCenter <- function(df){
-  df$latC = mean(df$Latitude)
-  df$longC = mean(df$Longitude)
+getCenter <- function(df, weighted = FALSE){
+  
+  if(weighted){
+    
+    df$latC = calculateWeightedMean(df$Latitude, df$N_points)
+    df$longC = calculateWeightedMean(df$Longitude, df$N_points)
+    
+  } else{
+    
+    df$latC = mean(df$Latitude)
+    df$longC = mean(df$Longitude)
+    
+  }
+  
   return(df)
+}
+
+calculateWeightedMean <- function(value, weights){
+  
+  return(sum(value * weights)/sum(weights))
+  
 }
 
 arePointsInCircle <- function(df, radius){
@@ -340,7 +359,7 @@ arePointsInCircle <- function(df, radius){
   return (FALSE)
 }
 
-spaceClustering <- function(geo.visited, distanceThreshold){
+spaceClustering <- function(geo.visited, distanceThreshold, weighted = FALSE){
   # Create a new variable
   print("Space clustering in progress...")
   geo.visited$placeID = "" 
