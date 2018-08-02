@@ -1,4 +1,3 @@
-source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
 library("readxl")
 library("stringr")
 library("lubridate")
@@ -6,10 +5,10 @@ library("tidyverse")
 library("PostcodesioR")
 
 #analysis_type <- "time_based"
- #analysis_type <- "density_based"
- analysis_type <- "combined"
+#analysis_type <- "density_based"
+analysis_type <- "combined"
 
-minutes_threshold <- 8
+minutes_threshold <- 10
 
 timeThreshold <- 60*minutes_threshold
 
@@ -20,6 +19,10 @@ load(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
            ".RData",
            sep = ""))
 
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
+
+# sf_places_classified <- sf_places_classified %>% 
+#   mutate(activityCategory = ifelse(activityType == "outdoor activities", "recreational activities", activityCategory))
 
 ############## assign classified places to places visited
 places.visited_classified  <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
@@ -29,18 +32,27 @@ places.visited_classified  <- readRDS(paste("~/Data/Projects/Club M/Healthy volu
                                             ".rds",
                                             sep = "")) %>% 
     mutate(duration = as.duration(intervalTime)) %>% 
-        merge(sf_places_classified, by = c("patient","placeID")) # add place info to daily activities
+        left_join(sf_places_classified, by = c("patient","placeID")) # add place info to daily activities
 
+places.visited_classified$date <- as.Date(places.visited_classified$intervalTime@start)
 
-places.visited_classified <- places.visited_classified[as.numeric(places.visited_classified$duration) >= 60, ] # keep only activities that last more than one minute
- 
-places.visited_classified  <- places.visited_classified %>% 
-  mergePlacesVisited(threshold = 20*60) # merge together intervals that pertain to same activity, and are consecutive within the time threshold 
+places.visited_classified  <- places.visited_classified %>%
+  mergePlacesVisited(threshold = 20*60)# merge together intervals that pertain to same activity, and are consecutive within the time threshold
 
 places.visited_classified <- places.visited_classified %>% 
   getHome() %>% 
-    mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))# participants were mostly medical students going to different hospitals for training
+    mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))  %>% # participants were mostly medical students going to different hospitals for training
+  mutate(intervalTime = as.character(intervalTime)) %>% 
+  filter(duration > 0) %>% 
+    select(-start)
 
+places.visited_classified  <- places.visited_classified %>% 
+  separate(col = "intervalTime", into = c("start", "end"), sep = "--") %>% 
+  mutate(start = ymd_hms(start),
+         intervalTime = as.interval(duration, start = start)) %>%
+    select(-start, -end) %>% 
+    mergePlacesVisited(threshold = 20*60) %>% 
+      mutate(intervalTime = as.character(intervalTime))# merge together intervals that pertain to same activity, and are consecutive within the time threshold
 
 #### Results
 # load diary
@@ -58,12 +70,34 @@ sfd <- readRDS("~/Data/Projects/Club M/Healthy volunteers study/Datasets/analysi
 
 sfd <- as.data.frame(sfd) 
 
-#sfd <- sfd %>% filter(patient %in% c(1:5))
+
+# sfd[sfd$activityType == "outdoor activities", ]$activityCategory <- "recreational activities"
 
 # introduce date column
-places.visited_classified$date <- as.Date(places.visited_classified$intervalTime@start)
+
 sfd <- sfd %>% 
   mutate(date = as.Date(date))
+
+##### exclude days outside the UK
+min_lat <- 49.642879
+max_lat <- 59.720106
+min_long <- -12.572754
+max_long <- 1.623168
+
+
+days_to_exclude <- places.visited_classified %>% 
+  filter(!(latitude >= min_lat &
+             latitude <= max_lat &
+             longitude >= min_long & 
+             longitude <= max_long)) %>% 
+  distinct(patient, date)
+
+
+places.visited_classified <- places.visited_classified %>% 
+  anti_join(days_to_exclude, by = c("patient", "date"))
+
+sfd <- sfd %>% 
+  anti_join(days_to_exclude, by = c("patient", "date"))
 
 # get unique daily categories found by the algorithm
 dailyCategories <- getDailyCategoriesActivities(places.visited_classified) %>% 
@@ -180,7 +214,7 @@ write.csv(NPV_comp, paste("~/Data/Projects/Club M/Healthy volunteers study/Analy
                           "/patients_places_visited", timeThreshold,".csv", sep = ""))
 
 # write activities
-saveRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
+saveRDS(places.visited_classified, paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
               analysis_type,
               "/activities_OSM",timeThreshold,".rds", sep = ""))
 
