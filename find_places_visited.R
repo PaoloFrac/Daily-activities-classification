@@ -59,9 +59,9 @@ sfd <- as.data.frame(sfd)
 
   timeThreshold <- 60*minutes_threshold
   
-  distanceThreshold = 50
+  distanceThreshold = 100
   
-  radius = 50
+  radius = 100
   
   
   geo.visited <- NULL

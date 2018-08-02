@@ -375,11 +375,7 @@ spaceClustering <- function(geo.visited, distanceThreshold, weighted = FALSE){
     # get all patients visited geolocations
     tmp = geo.visited[geo.visited$patient==p,]
     # set seed for reproducibility
-    set.seed(42)
-    index <- sample(1:nrow(tmp), size = 1)
-    # initialise centroid at the first point
     center = c(tmp$Latitude[1],tmp$Longitude[1])
-    center = c(tmp$Latitude[index],tmp$Longitude[index])
     # for each visited geolocation
     while(nrow(tmp)>0){
       # calculate the distance between the centre and all remaining visited geolocations
@@ -424,8 +420,9 @@ spaceClustering <- function(geo.visited, distanceThreshold, weighted = FALSE){
       }
     }
   }
-  clusters= unique(geo.visited[,c("patient","placeID","CenterLat","CenterLong")])
-  return(clusters)
+  # clusters= unique(geo.visited[,c("patient","placeID","CenterLat","CenterLong")])
+  # return(clusters)
+  return(geo.visited)
 }
 
 assignPlaceID <- function(df, places, distanceThreshold){
