@@ -374,8 +374,12 @@ spaceClustering <- function(geo.visited, distanceThreshold, weighted = FALSE){
     clusterID = 1
     # get all patients visited geolocations
     tmp = geo.visited[geo.visited$patient==p,]
+    # set seed for reproducibility
+    set.seed(42)
+    index <- sample(1:nrow(tmp), size = 1)
     # initialise centroid at the first point
     center = c(tmp$Latitude[1],tmp$Longitude[1])
+    center = c(tmp$Latitude[index],tmp$Longitude[index])
     # for each visited geolocation
     while(nrow(tmp)>0){
       # calculate the distance between the centre and all remaining visited geolocations
@@ -401,12 +405,12 @@ spaceClustering <- function(geo.visited, distanceThreshold, weighted = FALSE){
         # if cluster coordinates equal to the ones at the previous iteration
         if(cluster$latC[1]==center[1] & cluster$longC[1]==center[2]){
           # assign visited geolocations to current cluster and remove them from the data to process
-          for(z in cluster$X){
-            geo.visited[geo.visited$X==z,]$placeID = paste0("",clusterID)
-            geo.visited[geo.visited$X==z,]$CenterLat = center[1]
-            geo.visited[geo.visited$X==z,]$CenterLong = center[2]
-            tmp = tmp[!(tmp$X==z),]
-          }
+          geo.visited[geo.visited$X %in% cluster$X,]$placeID = paste0("",clusterID)
+          geo.visited[geo.visited$X %in% cluster$X,]$CenterLat = center[1]
+          geo.visited[geo.visited$X %in% cluster$X,]$CenterLong = center[2]
+          
+          tmp = tmp[!(tmp$X %in% cluster$X),]
+          
           # increment counter
           clusterID = clusterID+1
           # if there are more points assign the center to the next point to be processed
