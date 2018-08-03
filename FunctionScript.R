@@ -263,7 +263,7 @@ getDistance <- function(lat1, long1, lat2, long2){
   return(distance)
 }
 
-densityBasedMethod <- function(df,timeThreshold,radius ){
+densityBasedMethod <- function(df,timeThreshold,radius, cluster = TRUE){
   # Patient and sessions
   ps=df[,c("patient","sessionid")]
   ps=ps[!duplicated(ps),]
@@ -283,10 +283,24 @@ densityBasedMethod <- function(df,timeThreshold,radius ){
       # points in a circle?
       inCircle = arePointsInCircle(tenMinPoints,radius)
       if(inCircle==TRUE){
-        geoVisited = data.frame(patient = ps$patient[row],
-                                     sessionid = ps$sessionid[row],
-                                     Latitude = tenMinPoints$latC[1],
-                                     Longitude = tenMinPoints$longC[1])
+        
+        # decide whether to report the centroid of the geolocation visited or the actual GPS data points
+        if(cluster){
+          
+          geoVisited = data.frame(patient = ps$patient[row],
+                                  sessionid = ps$sessionid[row],
+                                  Latitude = tenMinPoints$latC[1],
+                                  Longitude = tenMinPoints$longC[1])
+          
+        }else{
+          
+          geoVisited = data.frame(patient = ps$patient[row],
+                                  sessionid = ps$sessionid[row],
+                                  Latitude = tenMinPoints$Latitude,
+                                  Longitude = tenMinPoints$Longitude)
+          
+        }
+        
         geo.visited = rbind(geo.visited,
                             geoVisited)
         
@@ -659,7 +673,6 @@ getNightPlaces <- function(places.visited){
 #   return(activities)
 # }
 
-
 homeFinder <- function(possible_homes, places.visited){
   
   require("tidyverse")
@@ -669,7 +682,7 @@ homeFinder <- function(possible_homes, places.visited){
   pl <- possible_homes %>% 
     left_join(activities %>% 
                 distinct(patient, placeID, longitude, latitude, placeType), by = c("patient", "placeID")) %>% 
-      filter(placeType %in% c("residential","dormitory")) # only places with tag residential and dormitory
+      filter(placeType %in% c("residential","dormitory", "house")) # only places with tag residential and dormitory
   
   for(pat in unique(pl$patient)){ # for each patient
     

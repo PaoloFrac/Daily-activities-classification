@@ -20,6 +20,11 @@ load(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
            ".RData",
            sep = ""))
 
+<<<<<<< HEAD
+=======
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
+
+>>>>>>> 55efc7a3ba2d7e965afdf99b3d784d0de6a88639
 # sf_places_classified <- sf_places_classified %>% 
 #   mutate(activityCategory = ifelse(activityType == "outdoor activities", "recreational activities", activityCategory))
 
@@ -42,7 +47,12 @@ places.visited_classified <- places.visited_classified %>%
   getHome() %>% 
     mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))  %>% # participants were mostly medical students going to different hospitals for training
   mutate(intervalTime = as.character(intervalTime)) %>% 
+<<<<<<< HEAD
   filter(duration > 0)
+=======
+  filter(duration > 0) %>% 
+    select(-start)
+>>>>>>> 55efc7a3ba2d7e965afdf99b3d784d0de6a88639
 
 places.visited_classified  <- places.visited_classified %>% 
   separate(col = "intervalTime", into = c("start", "end"), sep = "--") %>% 
@@ -75,6 +85,27 @@ sfd <- as.data.frame(sfd)
 
 sfd <- sfd %>% 
   mutate(date = as.Date(date))
+
+##### exclude days outside the UK
+min_lat <- 49.642879
+max_lat <- 59.720106
+min_long <- -12.572754
+max_long <- 1.623168
+
+
+days_to_exclude <- places.visited_classified %>% 
+  filter(!(latitude >= min_lat &
+             latitude <= max_lat &
+             longitude >= min_long & 
+             longitude <= max_long)) %>% 
+  distinct(patient, date)
+
+
+places.visited_classified <- places.visited_classified %>% 
+  anti_join(days_to_exclude, by = c("patient", "date"))
+
+sfd <- sfd %>% 
+  anti_join(days_to_exclude, by = c("patient", "date"))
 
 # get unique daily categories found by the algorithm
 dailyCategories <- getDailyCategoriesActivities(places.visited_classified) %>% 
