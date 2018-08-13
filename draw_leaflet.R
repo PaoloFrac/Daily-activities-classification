@@ -1,9 +1,11 @@
 library("leaflet")
 
-pat <- "1"
-#session <- "3"
+pats <- places %>% 
+          distinct(patient)
 
-tmp <- places %>% filter(patient == 1)
+i <- 1
+
+tmp <- places %>% filter(patient == pats$patient[i])
   
   groups = as.character(unique(tmp$placeID))
   

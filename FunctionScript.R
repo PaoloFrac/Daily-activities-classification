@@ -238,7 +238,7 @@ getMediumSpeed <- function(df){
                       longPrev = c(NA, df$Longitude[-dim(df)[1]]))
   # NA raw removal
   dfTemp = dfTemp[dfTemp$patient==dfTemp$patientPrev & 
-                    dfTemp$sessionid==dfTemp$sessionIdPrev & 
+                    as.character(dfTemp$sessionid)==dfTemp$sessionIdPrev & 
                     !is.na(dfTemp$patientPrev) &
                     !is.na(dfTemp$latPrev) &
                     !is.na(dfTemp$longPrev), ]

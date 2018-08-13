@@ -1,15 +1,22 @@
 # Out of home activity recognition
-#rm(list=ls())
-# column names
-gps_data_column_names <- c("Latitude", "Longitude", "Altitude", "Bearing", "Accuracy", "Speed", "TimeStamp", "sessionid", "patient", "X")
-activity_data_column_name <- c("patient", "date", "time.start", "time.end", "place", "activityType", "activityCategory")
-
-# # Directories
-directory <- "~/Data/Projects/Club M/Healthy volunteers study/Datasets"
+rm(list=ls())
+# Before run the code, specify 
+# 1) if the dataset is from Healthy volounteers (HV) or from patients (P)
+# 2) which pipeline you want to run (time-based or density-based)
+# 3) the name of the Computer user
+datasetType = "P"
+pipeline = "timePlusDensity-based"
+user = "HeRCuser"
+# Directories
+dir = paste0("~/Data/Projects/Club M/Sonia_old/")
+functionDir = paste0(dir, "R Scripts/FunctionScript.R")
+directory <- paste0(dir,datasetType,"_data") 
+filesDirectory <- paste0(dir,"Files")
 
 # sourcing file with functions
-source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=FALSE)
+
 # libraries
+source(functionDir)
 library("osmar")
 library("ggmap")
 library("ggplot2")
@@ -22,34 +29,40 @@ library("XML")
 library("tidyverse")
 library("PostcodesioR")
 
-# key Google Place API
-key= c("AIzaSyDWs7eStEfQRGG8tuNDheo2SJR8ooPjr14",
-       "AIzaSyCdyXaICjKXqefkUUzebnw7A6wDvcQac7",
-       "AIzaSyCl_RMVOmZfOVdfj8Umn9RRytSHdSIIV3k",
-       "AIzaSyAoZSLAoWUxPlOBGE3EeHUlxJ9arrPJt90")
+# GPS data acquisition
+df = getDataset(directory)
 
-#  GPS data acquisition and final harmonisation
-df <- readRDS(paste(directory, "analysible_gps_data.rds", sep = "/")) %>% 
-  select(Latitude, Longitude, Altitude, Bearing, Accuracy, Speed, TimeStamp, sessionid, patient, X) %>% 
-    mutate(patient = factor(patient),
-           sessionid = factor(sessionid))
+# Social functioning diary acquisition
+setwd(filesDirectory)
+if(datasetType=="HV"){
+  # load social functioning diary
+  sfd = read.xlsx("HV_social functioning diaries.xlsx", sheetIndex = 1, header = TRUE )
+  sfd$date = as.Date(sfd$date) 
+  sfd$time.start = paste0(sfd$date, "T", format(sfd$time.start, "%H:%M:%S")) # get only time
+  sfd$time.start = as.POSIXct(strptime(sfd$time.start, "%Y-%m-%dT%H:%M:%S")) # combine with date
+  sfd$time.end = paste0(sfd$date, "T", format(sfd$time.end, "%H:%M:%S")) # get only time
+  sfd$time.end = as.POSIXct(strptime(sfd$time.end, "%Y-%m-%dT%H:%M:%S")) # combine with date
+  
+  # General data cleaning date-based: only if we have information related to the time
+  df = dateBasedCleaning(df, sfd)
+  sfd = dateBasedCleaningSF(df, sfd)
+}else{
+  sfd = read.xlsx("P_social functioning diaries.xlsx", sheetIndex = 1, header = TRUE )
+  sfd$date = as.Date(sfd$date)
+  # General data cleaning date-based: only if we have information relaed to the time
+  df = df[!(df$patient=="A1000_JF" & df$sessionid==1),]
+  df = df[!(df$patient=="A1000_JF" & df$sessionid==2),]
+  df = df[!(df$patient=="A1000_JF" & df$sessionid==5),]
+  df = df[!(df$patient=="A8000_SK"),]
+  df$patient = as.character(df$patient)
+  sfd$patient = as.character(sfd$patient)
+  df = dateBasedCleaning(df, sfd)
+  sfd = dateBasedCleaningSF(df, sfd) %>% 
+          select(patient, date, activityType, activityCategory)
+}
 
-df <- as.data.frame(df)
-
-# activity diary data acquisition and final harmonisation
-sfd <- readRDS(paste(directory, "analysible_activity_diary.rds", sep = "/")) %>% 
-  rename(time.start = time_start,
-         time.end = time_end) %>%
-   # select(patient, date, time.start, time.end, place, activityType, activityCategory) %>% 
-      mutate(patient = factor(patient),
-             time.end = ifelse(time.end == "6OM", "6:00 PM", time.end),
-             time.start = ymd_hm(paste(as.character(date), time.start)),
-             time.end = ymd_hm(paste(as.character(date), time.end)),
-             place = factor(place),
-             activityType = factor(activityType),
-             activityCategory = factor(activityCategory))
-
-sfd <- as.data.frame(sfd)
+source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=FALSE)
+directory <- "~/Data/Projects/Club M/Healthy volunteers study/Datasets"
 
   minutes_threshold <- 10
   
@@ -59,7 +72,7 @@ sfd <- as.data.frame(sfd)
 
   timeThreshold <- 60*minutes_threshold
   
-  distanceThreshold = 100
+  distanceThreshold = 50
   
   geo.visited <- NULL
   
@@ -73,7 +86,7 @@ sfd <- as.data.frame(sfd)
   if(analysis_type %in% c("time_based", "combined")){
     
     geo.visited = rbind(geo.visited,
-                        timeBasedMethod(df,timeThreshold,radius)) # apply density-based method
+                        timeBasedMethod(df,timeThreshold,distanceThreshold)) # apply density-based method
     
   }
  
@@ -96,6 +109,8 @@ saveRDS(places,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets
                        timeThreshold,
                        "s_",
                        distanceThreshold,
+                       "_",
+                       datasetType,
                        ".rds", 
                        sep = ""))
 
@@ -111,6 +126,8 @@ saveRDS(places.visited,  paste("~/Data/Projects/Club M/Healthy volunteers study/
                                timeThreshold,
                                "s_",
                                distanceThreshold,
+                               "_",
+                               datasetType,
                                ".rds", 
                                sep = ""))
 

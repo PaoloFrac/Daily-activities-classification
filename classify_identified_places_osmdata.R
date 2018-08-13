@@ -18,14 +18,14 @@ library("XML")
 source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
 
 sf_buildings <- buildings_info <- NULL
-
+datasetType = "P"
 #analysis_type <- "time_based"
 #analysis_type <- "density_based"
 analysis_type <- "combined"
 
-distance_threshold <- 100
+distance_threshold <- 50
 
-minutes_threshold <- 9
+minutes_threshold <- 10
 
 timeThreshold <- 60*minutes_threshold
 
@@ -35,6 +35,8 @@ sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Data
                            timeThreshold,
                            "s_",
                            distance_threshold,
+                           "_",
+                           datasetType,
                            ".rds", 
                            sep = "")) # load found places
 
@@ -86,7 +88,7 @@ for(i in 1:nrow(sf_places)){ # for each place
     
     
     # plot results
-    # source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/tmp.R', echo=TRUE)
+    source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/tmp.R', echo=TRUE)
     
     if(!is.null(sf_polygons_geom)){ # if there are buildings around
       
@@ -404,6 +406,8 @@ saveRDS(sf_places_classified, paste("~/Data/Projects/Club M/Healthy volunteers s
                                     timeThreshold,
                                     "s_",
                                     distance_threshold,
+                                    "_",
+                                    datasetType,
                                     ".rds", 
                                     sep = ""))
   
@@ -442,6 +446,8 @@ save.image(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
                  timeThreshold,
                  "s_",
                  distance_threshold,
+                 "_",
+                 datasetType,
                  ".rds", 
                  sep = ""))
 

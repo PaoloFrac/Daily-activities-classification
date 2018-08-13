@@ -8,9 +8,11 @@ library("PostcodesioR")
 #analysis_type <- "density_based"
 analysis_type <- "combined"
 
-minutes_threshold <- 5
+datasetType = "P"
 
-distance_threshold <- 100
+minutes_threshold <- 10
+
+distance_threshold <- 50
 
 timeThreshold <- 60*minutes_threshold
 
@@ -20,6 +22,8 @@ load(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
            timeThreshold,
            "s_",
            distance_threshold,
+           "_",
+           datasetType,
            ".rds", 
            sep = ""))
 
@@ -35,6 +39,8 @@ places.visited_classified  <- readRDS(paste("~/Data/Projects/Club M/Healthy volu
                                             timeThreshold,
                                             "s_",
                                             distance_threshold,
+                                            "_",
+                                            datasetType,
                                             ".rds", 
                                             sep = "")) %>% 
     mutate(duration = as.duration(intervalTime)) %>% 
@@ -47,7 +53,7 @@ places.visited_classified  <- places.visited_classified %>%
 
 places.visited_classified <- places.visited_classified %>% 
   getHome() %>% 
-    mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))  %>% # participants were mostly medical students going to different hospitals for training
+    # mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))  %>% # participants were mostly medical students going to different hospitals for training
   mutate(intervalTime = as.character(intervalTime)) %>% 
   filter(duration > 300) %>% 
     select(-start)
@@ -61,49 +67,8 @@ places.visited_classified  <- places.visited_classified %>%
       mutate(intervalTime = as.character(intervalTime))# merge together intervals that pertain to same activity, and are consecutive within the time threshold
 
 #### Results
-# load diary
-sfd <- readRDS("~/Data/Projects/Club M/Healthy volunteers study/Datasets/analysible_activity_diary.rds") %>% 
-  rename(time.start = time_start,
-         time.end = time_end) %>%
-  # select(patient, date, time.start, time.end, place, activityType, activityCategory) %>% 
-  mutate(patient = factor(patient),
-         time.end = ifelse(time.end == "6OM", "6:00 PM", time.end),
-         time.start = ymd_hm(paste(as.character(date), time.start)),
-         time.end = ymd_hm(paste(as.character(date), time.end)),
-         place = factor(place),
-         activityType = factor(activityType),
-         activityCategory = factor(activityCategory))
 
-sfd <- as.data.frame(sfd) 
-
-
-# sfd[sfd$activityType == "outdoor activities", ]$activityCategory <- "recreational activities"
-
-# introduce date column
-
-sfd <- sfd %>% 
-  mutate(date = as.Date(date))
-
-##### exclude days outside the UK
-min_lat <- 49.642879
-max_lat <- 59.720106
-min_long <- -12.572754
-max_long <- 1.623168
-
-
-days_to_exclude <- places.visited_classified %>% 
-  filter(!(latitude >= min_lat &
-             latitude <= max_lat &
-             longitude >= min_long & 
-             longitude <= max_long)) %>% 
-  distinct(patient, date)
-
-
-places.visited_classified <- places.visited_classified %>% 
-  anti_join(days_to_exclude, by = c("patient", "date"))
-
-sfd <- sfd %>% 
-  anti_join(days_to_exclude, by = c("patient", "date"))
+#### load diary
 
 # get unique daily categories found by the algorithm
 dailyCategories <- getDailyCategoriesActivities(places.visited_classified) %>% 
