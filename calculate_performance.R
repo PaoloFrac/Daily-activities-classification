@@ -10,7 +10,7 @@ analysis_type <- "combined"
 
 minutes_threshold <- 5
 
-distance_threshold <- 50
+distance_threshold <- 100
 
 timeThreshold <- 60*minutes_threshold
 
@@ -49,7 +49,7 @@ places.visited_classified <- places.visited_classified %>%
   getHome() %>% 
     mutate(activityCategory = ifelse(placeType == "hospital",  "employment", activityCategory))  %>% # participants were mostly medical students going to different hospitals for training
   mutate(intervalTime = as.character(intervalTime)) %>% 
-  filter(duration > 0) %>% 
+  filter(duration > 300) %>% 
     select(-start)
 
 places.visited_classified  <- places.visited_classified %>% 
@@ -156,16 +156,64 @@ performance_combined <- performance %>%
   left_join(performance_non_class, by = "patient")
 
 
+######calculate performance counting the number of categories predicted
+# # get daily categories found by the algorithm ###
+
+categories<-places.visited_classified %>%  
+  select(patient,sessionid,date,intervalTime,placeType,placeID,activityCategory)%>% 
+  filter(!is.na(activityCategory)) %>% # removing not labelled places 
+  arrange(patient,sessionid,intervalTime)  # sort the data in temporal order with each session
+
+categories_filter<-NULL
+
+# delete possible one activity that might be identified more than once
+# creterian for duplication
+# 1: for special places (hospitals and universities): consecutive activities
+# 2: for other places: consecutive activities happened in the same place
+for(i in as.numeric(as.character(unique(categories$patient)))){ # for each person
+  categories_i <- categories[categories$patient==i,]
+  for (ii in  as.numeric(as.character(unique(categories_i$sessionid)))){ # for each session
+    categories_ii<- categories_i[categories_i$sessionid==ii, ] 
+    if (nrow(categories_ii)==1){ 
+      categories_filter<-rbind(categories_filter,categories_ii) #if there are only one record in a session, just save it
+    }else{
+      for (iii in 2:nrow(categories_ii)){ 
+        
+        if (categories_ii$placeType[iii]=="hospital"|categories_ii$placeType[iii]=="university"){ # for special place
+          if(categories_ii$placeType[iii-1]!=categories_ii$placeType[iii]){   
+            categories_filter<-rbind(categories_filter,categories_ii[iii-1,])} # we save it, unless it meets the criterion one
+          
+        }else{  if(categories_ii$placeID[iii-1]!=categories_ii$placeID[iii]){ # for general places, use creterian 2
+          categories_filter<-rbind(categories_filter,categories_ii[iii-1,])} 
+        } 
+      } # now, we always miss the last record, since we save iii-1
+      categories_filter<-rbind(categories_filter,categories_ii[nrow(categories_ii),]) # save the last record 
+    }
+  }
+}  
+
+# get categories recorded in diary
+
+sfd.tmp2<-sfd %>% select(patient, date, place,activityCategory) %>%
+  mutate(activityCategory=tolower(as.character(activityCategory)),
+         place=tolower(as.character(place)))
+
+# calculate recall and precision
+performance_counting  <- getPerformance2(sfd.tmp2, categories_filter)
+
+performance_combined <- performance_combined %>% 
+                          left_join(performance_counting, by = "patient")
+
 write.csv(performance_combined, paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
                                       analysis_type,
                                       "/performance_OSM", 
                                       timeThreshold,
                                       "s_",
                                       distance_threshold,
-                                      ".rds", 
+                                      ".csv", 
                                       sep = ""))
 
-#calculate performance on number of daily categories
+#####calculate performance on number of daily categories
 dailyCategories <- getDailyCategoriesActivities(places.visited_classified)
 
 NPV_GPS <- dailyCategories %>% 
@@ -225,7 +273,7 @@ write.csv(NPV_comp, paste("~/Data/Projects/Club M/Healthy volunteers study/Analy
                           timeThreshold,
                           "s_",
                           distance_threshold,
-                          ".rds", 
+                          ".csv", 
                           sep = ""))
 
 # write activities
