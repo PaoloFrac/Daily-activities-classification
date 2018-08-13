@@ -220,7 +220,7 @@ timeBasedMethod <- function(df, timeThreshold, distanceThreshold){
       df[df$X==(tmp.geovisited$xPrev[i]),]$geoVisited=TRUE
     }
     geo.visited = df[df$geoVisited==TRUE,]
-    geo.visited = geo.visited[,c("patient","sessionid","Latitude","Longitude")]
+    geo.visited = geo.visited[,c("patient","sessionid","Latitude","Longitude", "TimeStamp")]
     geo.visited$N_points = 1
   } else{
     geo.visited = NULL
@@ -269,6 +269,10 @@ densityBasedMethod <- function(df,timeThreshold,radius, cluster = TRUE){
   ps=df[,c("patient","sessionid")]
   ps=ps[!duplicated(ps),]
   geo.visited = NULL
+  df <- getMediumSpeed(df)
+  df <- df %>% 
+          filter(mediumSpeed <= 0.1)
+  
   # For each patient, for each session
   for(row in 1:dim(ps)[1]){
     df.tmp = df[df$patient == ps$patient[row] & df$sessionid == ps$sessionid[row],]
@@ -283,23 +287,26 @@ densityBasedMethod <- function(df,timeThreshold,radius, cluster = TRUE){
       tenMinPoints$distance = getDistance(tenMinPoints$latC, tenMinPoints$longC, tenMinPoints$Latitude, tenMinPoints$Longitude)
       # points in a circle?
       inCircle = arePointsInCircle(tenMinPoints,radius)
-      if(inCircle==TRUE){
+      if(inCircle==TRUE & nrow(tenMinPoints) > 1){
         
+        # 
         # decide whether to report the centroid of the geolocation visited or the actual GPS data points
         if(cluster){
           
-          geoVisited = data.frame(patient = ps$patient[row],
-                                  sessionid = ps$sessionid[row],
-                                  Latitude = tenMinPoints$latC[1],
-                                  Longitude = tenMinPoints$longC[1],
-                                  N_points = nrow(tenMinPoints))
-          
+         geoVisited = data.frame(patient = ps$patient[row],
+                                 sessionid = ps$sessionid[row],
+                                 Latitude = tenMinPoints$latC[1],
+                                 Longitude = tenMinPoints$longC[1],
+                                 N_points = nrow(tenMinPoints),
+                                 TimeStamp = tenMinPoints$TimeStamp[1])
+            
         }else{
           
           geoVisited = data.frame(patient = ps$patient[row],
                                   sessionid = ps$sessionid[row],
                                   Latitude = tenMinPoints$Latitude,
                                   Longitude = tenMinPoints$Longitude)
+          
           
         }
         
@@ -1474,8 +1481,7 @@ remove_building_yes <- function(shape, shape_geom){ # remove buildings with no v
     shape <- shape %>%
       filter(value != "yes")
     
-    shape_geom <- shape_geom %>% 
-      filter(ID %in% shape$ID)
+    shape_geom <- shape_geom[shape_geom$ID %in% shape$ID,]
     
   }
   
