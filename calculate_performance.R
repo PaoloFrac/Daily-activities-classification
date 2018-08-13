@@ -8,15 +8,19 @@ library("PostcodesioR")
 #analysis_type <- "density_based"
 analysis_type <- "combined"
 
-minutes_threshold <- 10
+minutes_threshold <- 5
+
+distance_threshold <- 50
 
 timeThreshold <- 60*minutes_threshold
 
 load(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
            analysis_type,
-           "/labelling_results",
+           "/labelling_results", 
            timeThreshold,
-           ".RData",
+           "s_",
+           distance_threshold,
+           ".rds", 
            sep = ""))
 
 source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-classification/FunctionScript.R', echo=TRUE)
@@ -27,9 +31,11 @@ source('~/Data/Projects/Club M/Healthy volunteers study/R/Daily-activities-class
 ############## assign classified places to places visited
 places.visited_classified  <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
                                             analysis_type,
-                                            "/places_visited",
+                                            "/places_visited", 
                                             timeThreshold,
-                                            ".rds",
+                                            "s_",
+                                            distance_threshold,
+                                            ".rds", 
                                             sep = "")) %>% 
     mutate(duration = as.duration(intervalTime)) %>% 
         left_join(sf_places_classified, by = c("patient","placeID")) # add place info to daily activities
@@ -152,8 +158,12 @@ performance_combined <- performance %>%
 
 write.csv(performance_combined, paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
                                       analysis_type,
-                                      "/performance_OSM",
-                                      timeThreshold,".csv", sep = ""))
+                                      "/performance_OSM", 
+                                      timeThreshold,
+                                      "s_",
+                                      distance_threshold,
+                                      ".rds", 
+                                      sep = ""))
 
 #calculate performance on number of daily categories
 dailyCategories <- getDailyCategoriesActivities(places.visited_classified)
@@ -211,12 +221,22 @@ NPV_comp <- NPV_comp %>%
 
 write.csv(NPV_comp, paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
                           analysis_type,
-                          "/patients_places_visited", timeThreshold,".csv", sep = ""))
+                          "/patients_places_visited", 
+                          timeThreshold,
+                          "s_",
+                          distance_threshold,
+                          ".rds", 
+                          sep = ""))
 
 # write activities
 saveRDS(places.visited_classified, paste("~/Data/Projects/Club M/Healthy volunteers study/Analysis/",
               analysis_type,
-              "/activities_OSM",timeThreshold,".rds", sep = ""))
+              "/activities_OSM", 
+              timeThreshold,
+              "s_",
+              distance_threshold,
+              ".rds", 
+              sep = ""))
 
 ## calculate mean number of unique categories per patient
 sfd.tmp %>% 

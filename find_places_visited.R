@@ -61,49 +61,58 @@ sfd <- as.data.frame(sfd)
   
   distanceThreshold = 100
   
-  radius = 100
-  
-  
   geo.visited <- NULL
-  
-  if(analysis_type %in% c("time_based", "combined")){
-    
-    # Step 1: Find geolocation visited
-    geo.visited = timeBasedMethod(df,timeThreshold,distanceThreshold) # apply time-based method
-    
-  }
   
   if(analysis_type %in% c("density_based", "combined")){
     
+    # Step 1: Find geolocation visited
+    geo.visited = densityBasedMethod(df,timeThreshold,distanceThreshold) # apply time-based method
+    
+  }
+  
+  if(analysis_type %in% c("time_based", "combined")){
+    
     geo.visited = rbind(geo.visited,
-                        densityBasedMethod(df,timeThreshold,radius) ) # apply density-based method
+                        timeBasedMethod(df,timeThreshold,radius)) # apply density-based method
     
   }
  
+  # geo.visited <- geo.visited %>% 
+  #                   distinct(patient, sessionid, Latitude, Longitude, TimeStamp)
+  # 
  # geo.visited = densityBasedMethod(df,timeThreshold,radius)
   # }
 # Step 2: Places visited identification
 # ______________________________________
 # 'spaceClustering' is a function that cluster geolocations visited in places
-places = spaceClustering(geo.visited, radius)   
+places = spaceClustering(geo.visited, distanceThreshold, weighted = TRUE)   
+
+places <- places %>% 
+            distinct(patient, placeID, CenterLat, CenterLong)
+
 saveRDS(places,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
                        analysis_type,
                        "/places", 
                        timeThreshold,
+                       "s_",
+                       distanceThreshold,
                        ".rds", 
                        sep = ""))
 
 # 'assignPlaceID' is the function that classify GPS data points with place ID
-df.places = assignPlaceID(df,places,radius)
+df.places = assignPlaceID(df,places,distanceThreshold)
 
 
 places.visited = getPlaceList(df.places, places)
 
 saveRDS(places.visited,  paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
                                analysis_type,
-                               "/places_visited",
+                               "/places_visited", 
                                timeThreshold,
-                               ".rds",
+                               "s_",
+                               distanceThreshold,
+                               ".rds", 
                                sep = ""))
+
 
 

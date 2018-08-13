@@ -23,9 +23,9 @@ sf_buildings <- buildings_info <- NULL
 #analysis_type <- "density_based"
 analysis_type <- "combined"
 
-distance_threshold <- 50
+distance_threshold <- 100
 
-minutes_threshold <- 10
+minutes_threshold <- 9
 
 timeThreshold <- 60*minutes_threshold
 
@@ -33,7 +33,9 @@ sf_places <- readRDS(paste("~/Data/Projects/Club M/Healthy volunteers study/Data
                            analysis_type,
                            "/places", 
                            timeThreshold,
-                           ".rds",
+                           "s_",
+                           distance_threshold,
+                           ".rds", 
                            sep = "")) # load found places
 
 sf_places_geom <-  sf_places %>% # initialise as sf object
@@ -398,9 +400,11 @@ for(i in 1:nrow(sf_places)){ # for each place
   
 saveRDS(sf_places_classified, paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
                                     analysis_type,
-                                    "/sf_places",
+                                    "/sf_places", 
                                     timeThreshold,
-                                    ".rds",
+                                    "s_",
+                                    distance_threshold,
+                                    ".rds", 
                                     sep = ""))
   
 ###### check if different categories for the same place 
@@ -434,8 +438,10 @@ sf_places_classified <- sf_places_classified %>%
 
 save.image(paste("~/Data/Projects/Club M/Healthy volunteers study/Datasets/",
                  analysis_type,
-                 "/labelling_results",
+                 "/labelling_results", 
                  timeThreshold,
-                 ".RData", 
+                 "s_",
+                 distance_threshold,
+                 ".rds", 
                  sep = ""))
 
